@@ -15,8 +15,11 @@ use objfs::local_worker;
 
 fn main() {
     // Ensure local worker is running (auto-register with scheduler)
-    let _worker_handle = local_worker::ensure_local_worker()
-        .ok();  // Ignore errors - will fall back to direct compilation
+    // Skip if OBJFS_NO_AUTO_WORKER is set
+    if env::var("OBJFS_NO_AUTO_WORKER").is_err() {
+        let _worker_handle = local_worker::ensure_local_worker()
+            .ok();  // Ignore errors - will fall back to remote or direct compilation
+    }
 
     if let Err(e) = run() {
         eprintln!("cargo-objfs-rustc error: {}", e);
@@ -73,7 +76,26 @@ fn run() -> io::Result<()> {
     let remote_config = RemoteConfig::from_env();
 
     // Determine target triple and input size
-    let target_triple = build_info.target_triple.as_deref().unwrap_or("unknown");
+    // If no --target flag, use host's default target
+    let target_triple = build_info.target_triple.as_deref()
+        .unwrap_or_else(|| {
+            // Default to host target when not specified
+            #[cfg(all(target_arch = "aarch64", target_os = "macos"))]
+            { "aarch64-apple-darwin" }
+            #[cfg(all(target_arch = "x86_64", target_os = "macos"))]
+            { "x86_64-apple-darwin" }
+            #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
+            { "x86_64-unknown-linux-gnu" }
+            #[cfg(all(target_arch = "aarch64", target_os = "linux"))]
+            { "aarch64-unknown-linux-gnu" }
+            #[cfg(not(any(
+                all(target_arch = "aarch64", target_os = "macos"),
+                all(target_arch = "x86_64", target_os = "macos"),
+                all(target_arch = "x86_64", target_os = "linux"),
+                all(target_arch = "aarch64", target_os = "linux")
+            )))]
+            { "unknown" }
+        });
     let input_size: u64 = build_info.input_files.iter()
         .filter_map(|f| std::fs::metadata(f).ok())
         .map(|m| m.len())
