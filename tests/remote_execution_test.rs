@@ -137,3 +137,15 @@ fn test_action_includes_platform_properties() {
     // Should have platform properties for Rust toolchain
     assert!(action.platform.is_some());
 }
+
+#[test]
+fn test_command_uses_relative_paths() {
+    let args = vec!["--crate-name", "test", "-o", "/tmp/output", "src/main.rs"];
+    let working_dir = PathBuf::from("/build");
+
+    let command = Command::from_rustc_args(&args, &working_dir);
+
+    // Output path should be relative to working directory
+    assert!(command.arguments.iter().any(|a| a == "output"));
+    assert!(!command.arguments.iter().any(|a| a.starts_with("/tmp")));
+}
