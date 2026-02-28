@@ -37,13 +37,21 @@ cargo-objfs-rustc rustc --target aarch64-apple-darwin \
 - Server is reachable and responding to HTTP requests
 - No connection errors
 
-### ⏳ Execution Timeout
-- The execute() call to the remote server times out after 10+ seconds
-- Process hangs waiting for remote execution response
+### ✅ Execution Timeout with Clear Error
+- Remote execution times out after 30 seconds (configurable)
+- Provides clear, actionable error message
+- Automatically falls back to local compilation
+- No hanging - fails fast
+
+## Error Handling
+
+### ✅ Timeout Protection
+- 30-second timeout on remote execution
+- Clear error message: "Worker may be missing required toolchain (rustc)"
+- Automatic fallback to local compilation
+- No indefinite hanging
 
 ## Root Cause Analysis
-
-The timeout is expected behavior given current server configuration:
 
 ### Missing Toolchain on Remote Worker
 
