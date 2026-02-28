@@ -185,3 +185,16 @@ fn test_fallback_to_filename_for_unrelativizable_paths() {
     // /tmp/output can be stripped to output
     assert!(command.arguments.iter().any(|a| a == "output"));
 }
+
+#[test]
+fn test_command_specifies_output_files() {
+    use objfs::re_client::Command;
+
+    let command = Command::new(
+        vec!["rustc".to_string(), "-o".to_string(), "output".to_string()],
+        "/build"
+    );
+
+    // Command should extract output file from -o flag
+    assert_eq!(command.output_files(), vec!["output"]);
+}

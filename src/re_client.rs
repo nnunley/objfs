@@ -93,6 +93,20 @@ impl Command {
         }
         bytes
     }
+
+    pub fn output_files(&self) -> Vec<String> {
+        let mut outputs = Vec::new();
+        let mut i = 0;
+        while i < self.arguments.len() {
+            if self.arguments[i] == "-o" && i + 1 < self.arguments.len() {
+                outputs.push(self.arguments[i + 1].clone());
+                i += 2;
+            } else {
+                i += 1;
+            }
+        }
+        outputs
+    }
 }
 
 /// Action represents a build action to execute remotely

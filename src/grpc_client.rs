@@ -272,7 +272,7 @@ impl GrpcRemoteCas {
             let command_proto = cas::Command {
                 arguments: command.arguments.clone(),
                 environment_variables: vec![],
-                output_files: vec![],
+                output_files: command.output_files(),
                 output_directories: vec![],
                 output_paths: vec![],
                 platform: None,
