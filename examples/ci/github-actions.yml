@@ -1,0 +1,116 @@
+# GitHub Actions workflow demonstrating objfs distributed build caching
+# Place this in .github/workflows/build.yml
+
+name: Build with objfs
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  # Point to your shared NativeLink scheduler
+  OBJFS_REMOTE_ENDPOINT: "http://build-cluster.company.com:50051"
+  OBJFS_REMOTE_INSTANCE: "main"
+  # Don't start local worker in CI - just use remote cluster
+  OBJFS_NO_AUTO_WORKER: "1"
+  # Cache everything for maximum benefit
+  OBJFS_MIN_REMOTE_SIZE: "1"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Install objfs
+        run: |
+          # Download and install objfs wrapper
+          curl -L https://github.com/yourorg/objfs/releases/latest/download/cargo-objfs-rustc-linux-x86_64 \
+            -o /tmp/cargo-objfs-rustc
+          chmod +x /tmp/cargo-objfs-rustc
+          sudo mv /tmp/cargo-objfs-rustc /usr/local/bin/
+
+          # Verify installation
+          cargo-objfs-rustc --version || echo "objfs wrapper installed"
+
+      - name: Configure cargo to use objfs
+        run: |
+          mkdir -p .cargo
+          cat > .cargo/config.toml << 'EOF'
+          [build]
+          rustc-wrapper = "/usr/local/bin/cargo-objfs-rustc"
+          EOF
+
+      - name: Build project
+        run: |
+          cargo build --release
+
+      - name: Run tests
+        run: |
+          cargo test --release
+
+      - name: Show cache statistics
+        if: always()
+        run: |
+          echo "Build completed with objfs distributed caching"
+          # In future, objfs could provide stats command
+          # cargo-objfs-rustc stats
+
+  # Parallel build jobs - all share same cache cluster
+  build-multiple-targets:
+    strategy:
+      matrix:
+        target:
+          - x86_64-unknown-linux-gnu
+          - aarch64-unknown-linux-gnu
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+
+      - name: Install objfs
+        run: |
+          curl -L https://github.com/yourorg/objfs/releases/latest/download/cargo-objfs-rustc-linux-x86_64 \
+            -o /tmp/cargo-objfs-rustc
+          chmod +x /tmp/cargo-objfs-rustc
+          sudo mv /tmp/cargo-objfs-rustc /usr/local/bin/
+
+      - name: Configure cargo
+        run: |
+          mkdir -p .cargo
+          cat > .cargo/config.toml << 'EOF'
+          [build]
+          rustc-wrapper = "/usr/local/bin/cargo-objfs-rustc"
+          EOF
+
+      - name: Build for ${{ matrix.target }}
+        run: |
+          cargo build --release --target ${{ matrix.target }}
+        env:
+          # Each target shares the same cache cluster
+          OBJFS_REMOTE_ENDPOINT: "http://build-cluster.company.com:50051"
+          OBJFS_REMOTE_INSTANCE: "main"
+          OBJFS_NO_AUTO_WORKER: "1"
+          OBJFS_MIN_REMOTE_SIZE: "1"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/your-binary

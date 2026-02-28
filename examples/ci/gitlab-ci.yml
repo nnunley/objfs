@@ -1,0 +1,122 @@
+# GitLab CI configuration demonstrating objfs distributed build caching
+# Place this in .gitlab-ci.yml
+
+variables:
+  # Shared NativeLink scheduler for entire organization
+  OBJFS_REMOTE_ENDPOINT: "http://build-cluster.company.com:50051"
+  OBJFS_REMOTE_INSTANCE: "main"
+  OBJFS_NO_AUTO_WORKER: "1"
+  OBJFS_MIN_REMOTE_SIZE: "1"
+  # Disable GitLab's built-in cargo cache - objfs provides better caching
+  CARGO_HOME: "${CI_PROJECT_DIR}/.cargo"
+
+stages:
+  - setup
+  - build
+  - test
+  - deploy
+
+# Install objfs once, use in all jobs
+.objfs_setup:
+  before_script:
+    - |
+      # Install objfs wrapper
+      curl -L https://github.com/yourorg/objfs/releases/latest/download/cargo-objfs-rustc-linux-x86_64 \
+        -o /tmp/cargo-objfs-rustc
+      chmod +x /tmp/cargo-objfs-rustc
+      sudo mv /tmp/cargo-objfs-rustc /usr/local/bin/
+    - |
+      # Configure cargo to use objfs
+      mkdir -p .cargo
+      cat > .cargo/config.toml << 'EOF'
+      [build]
+      rustc-wrapper = "/usr/local/bin/cargo-objfs-rustc"
+      EOF
+
+build:debug:
+  extends: .objfs_setup
+  stage: build
+  image: rust:latest
+  script:
+    - cargo build
+  artifacts:
+    paths:
+      - target/debug/
+    expire_in: 1 hour
+
+build:release:
+  extends: .objfs_setup
+  stage: build
+  image: rust:latest
+  script:
+    - cargo build --release
+  artifacts:
+    paths:
+      - target/release/
+    expire_in: 1 day
+
+# Parallel builds for multiple targets - all share objfs cache
+build:linux-x86_64:
+  extends: .objfs_setup
+  stage: build
+  image: rust:latest
+  script:
+    - rustup target add x86_64-unknown-linux-gnu
+    - cargo build --release --target x86_64-unknown-linux-gnu
+  artifacts:
+    paths:
+      - target/x86_64-unknown-linux-gnu/release/
+    expire_in: 1 day
+
+build:linux-aarch64:
+  extends: .objfs_setup
+  stage: build
+  image: rust:latest
+  script:
+    - rustup target add aarch64-unknown-linux-gnu
+    - cargo build --release --target aarch64-unknown-linux-gnu
+  artifacts:
+    paths:
+      - target/aarch64-unknown-linux-gnu/release/
+    expire_in: 1 day
+
+test:unit:
+  extends: .objfs_setup
+  stage: test
+  image: rust:latest
+  dependencies:
+    - build:debug
+  script:
+    - cargo test
+
+test:integration:
+  extends: .objfs_setup
+  stage: test
+  image: rust:latest
+  dependencies:
+    - build:release
+  script:
+    - cargo test --release --test integration_tests
+
+# Example: Multi-project monorepo benefits massively from objfs
+build:workspace:
+  extends: .objfs_setup
+  stage: build
+  image: rust:latest
+  script:
+    - |
+      # All workspace members share dependencies via objfs cache
+      cargo build --workspace --release
+  parallel:
+    matrix:
+      - WORKSPACE_MEMBER:
+          - service-a
+          - service-b
+          - service-c
+          - shared-lib
+  script:
+    - cargo build --release -p ${WORKSPACE_MEMBER}
+  artifacts:
+    paths:
+      - target/release/${WORKSPACE_MEMBER}
+    expire_in: 1 day
