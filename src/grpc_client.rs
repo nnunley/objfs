@@ -271,7 +271,16 @@ impl GrpcRemoteCas {
             // 1. Upload command to CAS
             let command_proto = cas::Command {
                 arguments: command.arguments.clone(),
-                environment_variables: vec![],
+                environment_variables: vec![
+                    cas::command::EnvironmentVariable {
+                        name: "PATH".to_string(),
+                        value: "/opt/osxcross/target/bin:/root/.nix-profile/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/run/current-system/sw/bin".to_string(),
+                    },
+                    cas::command::EnvironmentVariable {
+                        name: "CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER".to_string(),
+                        value: "aarch64-apple-darwin23.5-clang".to_string(),
+                    },
+                ],
                 output_files: command.output_files(),
                 output_directories: vec![],
                 output_paths: vec![],

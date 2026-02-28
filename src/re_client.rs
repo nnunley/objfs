@@ -51,6 +51,7 @@ impl Command {
 
     /// Create a command from rustc arguments
     pub fn from_rustc_args(args: &[&str], working_dir: &PathBuf) -> Self {
+        // Use rustc from PATH (works on both NixOS and macOS)
         let mut full_args = vec!["rustc".to_string()];
 
         // Convert absolute paths to relative
@@ -126,7 +127,9 @@ impl Action {
         let command_bytes = command.to_bytes();
         let command_digest = Digest::from_data(&command_bytes);
 
-        let mut platform = Platform::detect();
+        // Use Linux platform for remote execution
+        // The worker runs on Linux, even if we're compiling for macOS
+        let mut platform = Platform::new("linux", "x86-64");
         // Add container-image property for Rust workers
         platform.properties.insert("container-image".to_string(), "rust:latest".to_string());
 

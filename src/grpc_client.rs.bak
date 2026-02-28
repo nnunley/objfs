@@ -1,0 +1,336 @@
+// gRPC client for Remote Execution API v2
+// Implements secure communication with NativeLink over TLS
+
+use crate::re_client::{Digest, RemoteCas};
+use std::io;
+
+// Include generated protobuf code
+pub mod cas {
+    tonic::include_proto!("build.bazel.remote.execution.v2");
+}
+
+// Re-export for convenience
+pub use cas::{
+    execution_client::ExecutionClient,
+    content_addressable_storage_client::ContentAddressableStorageClient,
+};
+
+/// gRPC-based Remote CAS client
+/// Supports both TLS (https://) and plaintext (grpc://) connections
+pub struct GrpcRemoteCas {
+    endpoint: String,
+    instance_name: String,
+    use_tls: bool,
+}
+
+impl GrpcRemoteCas {
+    /// Create a new gRPC client
+    /// endpoint should be like "https://scheduler-host:50051" or "grpc://localhost:50051"
+    pub fn new(endpoint: String, instance_name: String) -> Self {
+        let use_tls = endpoint.starts_with("https://");
+        Self {
+            endpoint,
+            instance_name,
+            use_tls,
+        }
+    }
+
+    /// Create a client with TLS enabled
+    pub fn with_tls(host: &str, port: u16, instance_name: String) -> Self {
+        Self::new(
+            format!("https://{}:{}", host, port),
+            instance_name,
+        )
+    }
+
+    /// Create a client without TLS (insecure, for testing only)
+    pub fn without_tls(host: &str, port: u16, instance_name: String) -> Self {
+        Self::new(
+            format!("http://{}:{}", host, port),
+            instance_name,
+        )
+    }
+
+    async fn connect(&self) -> Result<cas::content_addressable_storage_client::ContentAddressableStorageClient<tonic::transport::Channel>, anyhow::Error> {
+        let endpoint = tonic::transport::Channel::from_shared(self.endpoint.clone())?;
+
+        let channel = if self.use_tls {
+            endpoint
+                .tls_config(tonic::transport::ClientTlsConfig::new())?
+                .connect()
+                .await?
+        } else {
+            endpoint
+                .connect()
+                .await?
+        };
+
+        Ok(cas::content_addressable_storage_client::ContentAddressableStorageClient::new(channel))
+    }
+}
+
+impl RemoteCas for GrpcRemoteCas {
+    fn exists(&self, digest: &Digest) -> io::Result<bool> {
+        // Use tokio runtime for async gRPC call
+        let runtime = tokio::runtime::Runtime::new()
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+
+        runtime.block_on(async {
+            let mut client = self.connect()
+                .await
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+
+            let request = cas::FindMissingBlobsRequest {
+                instance_name: self.instance_name.clone(),
+                blob_digests: vec![cas::Digest {
+                    hash: digest.hash.clone(),
+                    size_bytes: digest.size_bytes,
+                }],
+            };
+
+            let response = client
+                .find_missing_blobs(request)
+                .await
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+
+            // If the digest is in missing_blob_digests, it doesn't exist
+            Ok(response.get_ref().missing_blob_digests.is_empty())
+        })
+    }
+
+    fn upload(&self, data: &[u8]) -> io::Result<Digest> {
+        use sha2::{Sha256, Digest as Sha2Digest};
+
+        // Compute digest
+        let mut hasher = Sha256::new();
+        hasher.update(data);
+        let hash = hex::encode(hasher.finalize());
+        let digest = Digest::new(hash.clone(), data.len() as i64);
+
+        let runtime = tokio::runtime::Runtime::new()
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+
+        runtime.block_on(async {
+            let mut client = self.connect()
+                .await
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+
+            let request = cas::BatchUpdateBlobsRequest {
+                instance_name: self.instance_name.clone(),
+                requests: vec![cas::batch_update_blobs_request::Request {
+                    digest: Some(cas::Digest {
+                        hash: hash.clone(),
+                        size_bytes: data.len() as i64,
+                    }),
+                    data: data.to_vec(),
+                }],
+            };
+
+            let response = client
+                .batch_update_blobs(request)
+                .await
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+
+            // Check if upload succeeded
+            let responses = &response.get_ref().responses;
+            if responses.is_empty() {
+                return Err(io::Error::new(io::ErrorKind::Other, "No response from server"));
+            }
+
+            if let Some(status) = &responses[0].status {
+                if status.code != 0 {
+                    return Err(io::Error::new(
+                        io::ErrorKind::Other,
+                        format!("Upload failed: {}", status.message)
+                    ));
+                }
+            }
+
+            Ok(digest)
+        })
+    }
+
+    fn download(&self, digest: &Digest) -> io::Result<Vec<u8>> {
+        let runtime = tokio::runtime::Runtime::new()
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+
+        runtime.block_on(async {
+            let mut client = self.connect()
+                .await
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+
+            let request = cas::BatchReadBlobsRequest {
+                instance_name: self.instance_name.clone(),
+                digests: vec![cas::Digest {
+                    hash: digest.hash.clone(),
+                    size_bytes: digest.size_bytes,
+                }],
+            };
+
+            let response = client
+                .batch_read_blobs(request)
+                .await
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+
+            let responses = &response.get_ref().responses;
+            if responses.is_empty() {
+                return Err(io::Error::new(io::ErrorKind::NotFound, "Blob not found"));
+            }
+
+            if let Some(status) = &responses[0].status {
+                if status.code != 0 {
+                    return Err(io::Error::new(
+                        io::ErrorKind::NotFound,
+                        format!("Download failed: {}", status.message)
+                    ));
+                }
+            }
+
+            Ok(responses[0].data.clone())
+        })
+    }
+
+    /// Get execution client connection
+    async fn connect_execution(&self) -> Result<cas::execution_client::ExecutionClient<tonic::transport::Channel>, anyhow::Error> {
+        let endpoint = tonic::transport::Channel::from_shared(self.endpoint.clone())?;
+
+        let channel = if self.use_tls {
+            endpoint
+                .tls_config(tonic::transport::ClientTlsConfig::new())?
+                .connect()
+                .await?
+        } else {
+            endpoint
+                .connect()
+                .await?
+        };
+
+        Ok(cas::execution_client::ExecutionClient::new(channel))
+    }
+
+    /// Execute an action remotely via gRPC
+    pub fn execute_action(
+        &self,
+        action: &crate::re_client::Action,
+        command: &crate::re_client::Command,
+    ) -> io::Result<Vec<u8>> {
+        let runtime = tokio::runtime::Runtime::new()
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+
+        runtime.block_on(async {
+            // 1. Upload command to CAS
+            let command_proto = cas::Command {
+                arguments: command.arguments.clone(),
+                environment_variables: vec![],
+                working_directory: command.working_directory.clone(),
+            };
+
+            let command_bytes = {
+                use prost::Message;
+                let mut buf = Vec::new();
+                command_proto.encode(&mut buf)
+                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                buf
+            };
+
+            let command_digest = self.upload(&command_bytes)?;
+
+            // 2. Create action proto
+            let action_proto = cas::Action {
+                command_digest: Some(cas::Digest {
+                    hash: command_digest.hash.clone(),
+                    size_bytes: command_digest.size_bytes,
+                }),
+                input_root_digest: Some(cas::Digest {
+                    hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855".to_string(), // Empty tree
+                    size_bytes: 0,
+                }),
+                timeout_seconds: 300,
+                do_not_cache: false,
+            };
+
+            let action_bytes = {
+                use prost::Message;
+                let mut buf = Vec::new();
+                action_proto.encode(&mut buf)
+                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                buf
+            };
+
+            let action_digest = self.upload(&action_bytes)?;
+
+            // 3. Execute via gRPC
+            let mut exec_client = self.connect_execution()
+                .await
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+
+            let execute_request = cas::ExecuteRequest {
+                instance_name: self.instance_name.clone(),
+                action_digest: Some(cas::Digest {
+                    hash: action_digest.hash,
+                    size_bytes: action_digest.size_bytes,
+                }),
+                skip_cache_lookup: false,
+            };
+
+            let mut stream = exec_client
+                .execute(execute_request)
+                .await
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?
+                .into_inner();
+
+            // 4. Wait for execution result
+            let mut final_response = None;
+            while let Some(response) = stream.message()
+                .await
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))? {
+                final_response = Some(response);
+            }
+
+            let response = final_response
+                .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "No response from execution"))?;
+
+            // 5. Extract output
+            if let Some(result) = response.result {
+                // For now, return stdout
+                Ok(result.stdout_raw)
+            } else {
+                Err(io::Error::new(io::ErrorKind::Other, "No result in response"))
+            }
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[ignore]
+    fn test_grpc_cas_with_tls() {
+        let cas = GrpcRemoteCas::with_tls("scheduler-host", 50051, "main".to_string());
+
+        let data = b"test data from gRPC client";
+        let digest = cas.upload(data).unwrap();
+
+        assert!(cas.exists(&digest).unwrap());
+
+        let retrieved = cas.download(&digest).unwrap();
+        assert_eq!(retrieved, data);
+    }
+
+    #[test]
+    #[ignore]
+    fn test_grpc_cas_without_tls() {
+        // For local testing without TLS
+        let cas = GrpcRemoteCas::without_tls("scheduler-host", 50051, "main".to_string());
+
+        let data = b"test data without TLS";
+        let digest = cas.upload(data).unwrap();
+
+        assert!(cas.exists(&digest).unwrap());
+
+        let retrieved = cas.download(&digest).unwrap();
+        assert_eq!(retrieved, data);
+    }
+}
