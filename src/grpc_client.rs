@@ -458,11 +458,21 @@ impl GrpcRemoteCas {
     ) -> io::Result<crate::re_client::Digest> {
         use crate::directory_tree::DirectoryTreeBuilder;
 
-        // Build directory tree
+        // 1. Upload all file contents to CAS first
+        // This must happen before uploading the Directory, because Directory
+        // contains digests that reference these files in CAS
+        for file in input_files {
+            if file.exists() {
+                let contents = std::fs::read(file)?;
+                self.upload(&contents)?;
+            }
+        }
+
+        // 2. Build directory tree
         let builder = DirectoryTreeBuilder::new();
         let directory = builder.build(input_files)?;
 
-        // Serialize and upload Directory proto
+        // 3. Serialize and upload Directory proto
         let dir_bytes = directory.to_proto_bytes()?;
         let dir_digest = self.upload(&dir_bytes)?;
 
