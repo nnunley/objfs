@@ -149,3 +149,39 @@ fn test_command_uses_relative_paths() {
     assert!(command.arguments.iter().any(|a| a == "output"));
     assert!(!command.arguments.iter().any(|a| a.starts_with("/tmp")));
 }
+
+#[test]
+fn test_command_relativizes_to_working_dir() {
+    let args = vec!["--crate-name", "test", "/build/src/main.rs"];
+    let working_dir = PathBuf::from("/build");
+
+    let command = Command::from_rustc_args(&args, &working_dir);
+
+    // Should be relative to working_dir
+    assert!(command.arguments.iter().any(|a| a == "src/main.rs"));
+    assert!(!command.arguments.iter().any(|a| a == "/build/src/main.rs"));
+}
+
+#[test]
+fn test_preserves_already_relative_paths() {
+    let args = vec!["src/main.rs", "../lib/helper.rs"];
+    let working_dir = PathBuf::from("/build");
+
+    let command = Command::from_rustc_args(&args, &working_dir);
+
+    assert!(command.arguments.contains(&"src/main.rs".to_string()));
+    assert!(command.arguments.contains(&"../lib/helper.rs".to_string()));
+}
+
+#[test]
+fn test_fallback_to_filename_for_unrelativizable_paths() {
+    let args = vec!["/usr/bin/rustc", "-o", "/tmp/output"];
+    let working_dir = PathBuf::from("/build");
+
+    let command = Command::from_rustc_args(&args, &working_dir);
+
+    // /usr/bin/rustc can't be made relative to /build, use filename
+    assert!(command.arguments.iter().any(|a| a == "rustc"));
+    // /tmp/output can be stripped to output
+    assert!(command.arguments.iter().any(|a| a == "output"));
+}

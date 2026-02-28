@@ -51,18 +51,24 @@ impl Command {
 
     /// Create a command from rustc arguments
     pub fn from_rustc_args(args: &[&str], working_dir: &PathBuf) -> Self {
-        // First argument should be the executable
         let mut full_args = vec!["rustc".to_string()];
 
         // Convert absolute paths to relative
         for arg in args {
-            if arg.starts_with('/') || arg.starts_with("C:\\") {
-                // Try to make relative to working_dir
-                if let Ok(rel) = PathBuf::from(arg).strip_prefix("/tmp") {
+            let path = PathBuf::from(arg);
+            if path.is_absolute() {
+                // Try to make relative to working_dir first
+                if let Ok(rel) = path.strip_prefix(working_dir) {
+                    full_args.push(rel.to_string_lossy().to_string());
+                } else if let Ok(rel) = path.strip_prefix("/tmp") {
                     full_args.push(rel.to_string_lossy().to_string());
                 } else {
-                    // Keep as-is if can't relativize
-                    full_args.push(arg.to_string());
+                    // Last resort: use just the filename
+                    if let Some(name) = path.file_name() {
+                        full_args.push(name.to_string_lossy().to_string());
+                    } else {
+                        full_args.push(arg.to_string());
+                    }
                 }
             } else {
                 full_args.push(arg.to_string());
