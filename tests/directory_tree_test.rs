@@ -37,3 +37,21 @@ fn test_files_sorted_lexicographically() {
     assert_eq!(directory.files[1].name, "mango.rs");
     assert_eq!(directory.files[2].name, "zebra.rs");
 }
+
+#[test]
+fn test_directory_serialization() {
+    use objfs::directory_tree::{Directory, FileNode};
+    use objfs::re_client::Digest;
+
+    let directory = Directory {
+        files: vec![FileNode {
+            name: "main.rs".to_string(),
+            digest: Digest::new("abc123".to_string(), 100),
+            is_executable: false,
+        }],
+        directories: vec![],
+    };
+
+    let proto_bytes = directory.to_proto_bytes().unwrap();
+    assert!(!proto_bytes.is_empty());
+}

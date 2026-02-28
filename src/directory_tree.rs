@@ -1,6 +1,8 @@
 use crate::re_client::Digest;
 use std::path::PathBuf;
 use std::io;
+use nativelink_proto::build::bazel::remote::execution::v2 as cas;
+use prost::Message;
 
 #[derive(Debug, Clone)]
 pub struct FileNode {
@@ -71,5 +73,38 @@ impl DirectoryTreeBuilder {
             files: file_nodes,
             directories: vec![],
         })
+    }
+}
+
+impl Directory {
+    pub fn to_proto(&self) -> cas::Directory {
+        cas::Directory {
+            files: self.files.iter().map(|f| cas::FileNode {
+                name: f.name.clone(),
+                digest: Some(cas::Digest {
+                    hash: f.digest.hash.clone(),
+                    size_bytes: f.digest.size_bytes,
+                }),
+                is_executable: f.is_executable,
+                node_properties: None,
+            }).collect(),
+            directories: self.directories.iter().map(|d| cas::DirectoryNode {
+                name: d.name.clone(),
+                digest: Some(cas::Digest {
+                    hash: d.digest.hash.clone(),
+                    size_bytes: d.digest.size_bytes,
+                }),
+            }).collect(),
+            symlinks: vec![],
+            node_properties: None,
+        }
+    }
+
+    pub fn to_proto_bytes(&self) -> io::Result<Vec<u8>> {
+        let proto = self.to_proto();
+        let mut buf = Vec::new();
+        proto.encode(&mut buf)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        Ok(buf)
     }
 }
