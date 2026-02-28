@@ -347,12 +347,31 @@ impl GrpcRemoteCas {
                 .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?
                 .into_inner();
 
-            // 4. Wait for execution result
+            // 4. Wait for execution result with timeout
+            use tokio::time::{timeout, Duration};
+
+            let timeout_duration = Duration::from_secs(30);
             let mut final_response = None;
-            while let Some(response) = stream.message()
-                .await
-                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))? {
-                final_response = Some(response);
+
+            loop {
+                match timeout(timeout_duration, stream.message()).await {
+                    Ok(Ok(Some(response))) => {
+                        final_response = Some(response);
+                    }
+                    Ok(Ok(None)) => {
+                        // Stream ended normally
+                        break;
+                    }
+                    Ok(Err(e)) => {
+                        return Err(io::Error::new(io::ErrorKind::Other, e));
+                    }
+                    Err(_) => {
+                        return Err(io::Error::new(
+                            io::ErrorKind::TimedOut,
+                            "Remote execution timed out after 30 seconds. Worker may be missing required toolchain (rustc). Check NativeLink worker configuration."
+                        ));
+                    }
+                }
             }
 
             let response = final_response
