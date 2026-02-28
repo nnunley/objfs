@@ -21,6 +21,7 @@ pub struct DirectoryNode {
     pub digest: Digest,
 }
 
+#[derive(Default)]
 pub struct DirectoryTreeBuilder;
 
 impl DirectoryTreeBuilder {
@@ -39,6 +40,8 @@ impl DirectoryTreeBuilder {
             let contents = std::fs::read(file_path)?;
             let digest = Digest::from_data(&contents);
 
+            // TODO: This only extracts basename. For nested directories,
+            // we'll need to preserve relative paths to prevent collisions.
             let name = file_path
                 .file_name()
                 .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "No filename"))?
@@ -60,6 +63,9 @@ impl DirectoryTreeBuilder {
                 is_executable,
             });
         }
+
+        // Sort files lexicographically (required by RE API v2)
+        file_nodes.sort_by(|a, b| a.name.cmp(&b.name));
 
         Ok(Directory {
             files: file_nodes,
