@@ -5,6 +5,7 @@
 use std::io;
 use std::path::PathBuf;
 use crate::cas::Cas;
+use crate::platform::Platform;
 use sha2::{Sha256, Digest as Sha2Digest};
 
 /// A content digest using SHA256
@@ -74,24 +75,6 @@ impl Command {
     }
 }
 
-/// Platform properties for requesting specific worker capabilities
-#[derive(Debug, Clone)]
-pub struct Platform {
-    pub properties: Vec<(String, String)>,
-}
-
-impl Platform {
-    /// Default platform configuration for Rust builds
-    pub fn rust_default() -> Self {
-        Self {
-            properties: vec![
-                ("OSFamily".to_string(), "Linux".to_string()),
-                ("container-image".to_string(), "rust:latest".to_string()),
-            ],
-        }
-    }
-}
-
 /// Action represents a build action to execute remotely
 /// This maps to Action in RE API v2
 #[derive(Debug, Clone)]
@@ -109,11 +92,15 @@ impl Action {
         let command_bytes = command.to_bytes();
         let command_digest = Digest::from_data(&command_bytes);
 
+        let mut platform = Platform::detect();
+        // Add container-image property for Rust workers
+        platform.properties.insert("container-image".to_string(), "rust:latest".to_string());
+
         Self {
             command,
             command_digest,
             input_files,
-            platform: Some(Platform::rust_default()),
+            platform: Some(platform),
         }
     }
 }
