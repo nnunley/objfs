@@ -21,7 +21,6 @@ brew install nativelink
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 # Clone and build NativeLink
-cd your-projects
 git clone https://github.com/TraceMachina/nativelink.git
 cd nativelink
 cargo build --release
@@ -44,8 +43,8 @@ Create `/usr/local/etc/nativelink/config.json5`:
     {
       name: "CAS_MAIN",
       filesystem: {
-        content_path: "$HOME/.local/share/nativelink/cas/content",
-        temp_path: "$HOME/.local/share/nativelink/cas/tmp",
+        content_path: "$HOME/Library/Application Support/nativelink/cas/content",
+        temp_path: "$HOME/Library/Application Support/nativelink/cas/tmp",
         eviction_policy: {
           max_bytes: 21474836480,  // 20 GiB
         },
@@ -54,8 +53,8 @@ Create `/usr/local/etc/nativelink/config.json5`:
     {
       name: "AC_MAIN",
       filesystem: {
-        content_path: "$HOME/.local/share/nativelink/ac/content",
-        temp_path: "$HOME/.local/share/nativelink/ac/tmp",
+        content_path: "$HOME/Library/Application Support/nativelink/ac/content",
+        temp_path: "$HOME/Library/Application Support/nativelink/ac/tmp",
         eviction_policy: {
           max_bytes: 2147483648,  // 2 GiB
         },
@@ -64,8 +63,8 @@ Create `/usr/local/etc/nativelink/config.json5`:
     {
       name: "WORKER_FAST",
       filesystem: {
-        content_path: "$HOME/.local/share/nativelink/worker-fast/content",
-        temp_path: "$HOME/.local/share/nativelink/worker-fast/tmp",
+        content_path: "$HOME/Library/Application Support/nativelink/worker-fast/content",
+        temp_path: "$HOME/Library/Application Support/nativelink/worker-fast/tmp",
         eviction_policy: {
           max_bytes: 5368709120,  // 5 GiB
         },
@@ -111,7 +110,7 @@ Create `/usr/local/etc/nativelink/config.json5`:
       upload_action_result: {
         ac_store: "AC_MAIN",
       },
-      work_directory: "$HOME/.local/share/nativelink/work",
+      work_directory: "$HOME/Library/Application Support/nativelink/work",
       platform_properties: {
         OSFamily: {
           values: ["darwin"],
@@ -198,9 +197,9 @@ Create `/Library/LaunchDaemons/com.tracemachina.nativelink.plist`:
     <key>KeepAlive</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>$HOME/.local/share/nativelink/nativelink.log</string>
+    <string>$HOME/Library/Logs/nativelink.log</string>
     <key>StandardErrorPath</key>
-    <string>$HOME/.local/share/nativelink/nativelink.error.log</string>
+    <string>$HOME/Library/Logs/nativelink.error.log</string>
 </dict>
 </plist>
 ```
@@ -279,8 +278,8 @@ Run the scheduler on your Mac, and have remote workers connect to it.
     {
       name: "CAS_MAIN",
       filesystem: {
-        content_path: "$HOME/.local/share/nativelink/cas/content",
-        temp_path: "$HOME/.local/share/nativelink/cas/tmp",
+        content_path: "$HOME/Library/Application Support/nativelink/cas/content",
+        temp_path: "$HOME/Library/Application Support/nativelink/cas/tmp",
         eviction_policy: {
           max_bytes: 21474836480,  // 20 GiB
         },
@@ -289,8 +288,8 @@ Run the scheduler on your Mac, and have remote workers connect to it.
     {
       name: "AC_MAIN",
       filesystem: {
-        content_path: "$HOME/.local/share/nativelink/ac/content",
-        temp_path: "$HOME/.local/share/nativelink/ac/tmp",
+        content_path: "$HOME/Library/Application Support/nativelink/ac/content",
+        temp_path: "$HOME/Library/Application Support/nativelink/ac/tmp",
         eviction_policy: {
           max_bytes: 2147483648,  // 2 GiB
         },
@@ -299,8 +298,8 @@ Run the scheduler on your Mac, and have remote workers connect to it.
     {
       name: "WORKER_FAST",
       filesystem: {
-        content_path: "$HOME/.local/share/nativelink/worker-fast/content",
-        temp_path: "$HOME/.local/share/nativelink/worker-fast/tmp",
+        content_path: "$HOME/Library/Application Support/nativelink/worker-fast/content",
+        temp_path: "$HOME/Library/Application Support/nativelink/worker-fast/tmp",
         eviction_policy: {
           max_bytes: 5368709120,  // 5 GiB
         },
@@ -347,7 +346,7 @@ Run the scheduler on your Mac, and have remote workers connect to it.
       upload_action_result: {
         ac_store: "AC_MAIN",
       },
-      work_directory: "$HOME/.local/share/nativelink/work",
+      work_directory: "$HOME/Library/Application Support/nativelink/work",
       platform_properties: {
         OSFamily: {
           values: ["darwin"],
@@ -551,7 +550,7 @@ cargo build --target x86_64-unknown-linux-gnu
 Check NativeLink logs to see which worker handled each build:
 ```bash
 # Mac:
-tail -f $HOME/.local/share/nativelink/nativelink.log
+tail -f $HOME/Library/Logs/nativelink.log
 
 # Linux:
 incus exec nativelink-worker -- journalctl -u nativelink -f
@@ -565,7 +564,7 @@ This section covers configuring NativeLink workers in Docker containers to compi
 
 Install Rust directly in the NativeLink worker container.
 
-Set environment variable in `nativelink/deployment-examples/docker-compose/.env`:
+Set environment variable in `nativelink/deployment-examples/docker-compose/.env` (in your NativeLink source directory):
 
 ```bash
 ADDITIONAL_SETUP_WORKER_CMD="curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
@@ -680,7 +679,7 @@ export OBJFS_REMOTE_INSTANCE="main"
 export OBJFS_REMOTE_TARGETS="aarch64-apple-darwin"
 export OBJFS_MIN_REMOTE_SIZE=1
 
-objfs/target/release/cargo-objfs-rustc rustc \
+cargo-objfs-rustc rustc \
   --target aarch64-apple-darwin \
   --crate-name test \
   --edition 2021 \
@@ -851,7 +850,7 @@ docker-compose logs nativelink_executor
 
 # macOS Launch Daemon:
 sudo launchctl list | grep nativelink
-cat $HOME/.local/share/nativelink/nativelink.error.log
+cat $HOME/Library/Logs/nativelink.error.log
 ```
 
 ### Rust not found in worker

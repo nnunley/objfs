@@ -261,7 +261,7 @@ The only remaining work is **worker-side Rust toolchain configuration**, which i
 - `simulate-ci-build.sh` - Runnable demonstration script
 - Test logs showing actual remote execution and cache hits
 
-All files are in `$PROJECT_ROOT/examples/ci/`
+All files are in `examples/ci/`
 
 ## Next Steps for Production Use
 

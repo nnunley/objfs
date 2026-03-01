@@ -15,7 +15,6 @@ Run the CI simulation locally to see objfs in action:
 
 ```bash
 # Make sure objfs is installed
-cd objfs
 cargo build --release
 sudo cp target/release/cargo-objfs-rustc /usr/local/bin/
 
@@ -25,7 +24,7 @@ export OBJFS_REMOTE_INSTANCE="ci-demo"
 
 # Run simulation
 cd examples/ci
-./simulate-ci-build.sh your-project
+./simulate-ci-build.sh /path/to/your/rust-project
 ```
 
 This simulates 3 parallel CI jobs building the same project, demonstrating:
@@ -147,7 +146,6 @@ Cost savings: 58% fewer CI minutes
 
 **Solution**:
 ```bash
-cd objfs
 cargo build --release
 sudo cp target/release/cargo-objfs-rustc /usr/local/bin/
 ```
@@ -196,5 +194,5 @@ cat /tmp/objfs-ci-job-*.log | grep "remote execution"
 
 - [NativeLink Documentation](https://github.com/tracemachina/nativelink)
 - [Remote Execution API v2](https://github.com/bazelbuild/remote-apis)
-- [objfs Architecture](../../ARCHITECTURE.md)
-- [objfs Quickstart](../../QUICKSTART.md)
+- [objfs Architecture](../../docs/reference/architecture.md)
+- [objfs Usage](../../USAGE.md)
