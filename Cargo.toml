@@ -32,3 +32,7 @@ path = "src/bin/rustc_wrapper.rs"
 [[bin]]
 name = "objfs"
 path = "src/bin/cli.rs"
+
+[[bin]]
+name = "objfs-cc-wrapper"
+path = "src/bin/objfs-cc-wrapper.rs"
