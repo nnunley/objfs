@@ -28,7 +28,7 @@ cargo build --release
 ```bash
 cargo install nativelink
 sudo mkdir -p /etc/nativelink /var/lib/nativelink
-# Copy config from QUICKSTART.md
+# Copy config from docs/guides/quickstart.md
 sudo nativelink /etc/nativelink/config.json5
 ```
 
@@ -84,10 +84,15 @@ Developer Machines → NativeLink Scheduler → Worker Pool
 
 ## Documentation
 
-- [QUICKSTART.md](QUICKSTART.md) - Installation and setup
-- [ARCHITECTURE.md](ARCHITECTURE.md) - Technical details
-- [examples/ci/](examples/ci/) - CI/CD integration
-- [PLATFORM_COMPATIBLE_LINKING.md](PLATFORM_COMPATIBLE_LINKING.md) - Linking strategy
+- [Quick Start](docs/guides/quickstart.md) - Installation and setup
+- [Remote Execution](docs/guides/remote-execution.md) - Distributed builds
+- [Worker Setup](docs/guides/worker-setup.md) - NativeLink worker configuration
+- [CI/CD Integration](docs/guides/ci-cd.md) - GitHub Actions, GitLab CI
+- [C/C++ Integration](docs/guides/c-cpp-integration.md) - CMake, Make builds
+- [Architecture](docs/reference/architecture.md) - Technical details
+- [Linking Strategy](docs/reference/linking-strategy.md) - Platform-compatible linking
+- [Auto-Worker Registration](docs/reference/auto-worker-registration.md) - Zero-config clustering
+- [Roadmap](ROADMAP.md) - C/C++ feature tracking
 
 ## License
 
