@@ -2,12 +2,11 @@
 
 ## Installation
 
-Build from source:
-
 ```bash
-cargo build --release
-sudo cp target/release/cargo-objfs-rustc /usr/local/bin/
+cargo install --git https://github.com/nnunley/objfs
 ```
+
+This installs three binaries: `objfs`, `cargo-objfs-rustc`, and `objfs-cc-wrapper`.
 
 ## Quick Setup
 
@@ -132,19 +131,15 @@ builds, and performance benchmarks.
 
 ## C/C++ Integration
 
-objfs caches C/C++ compilation through `objfs-cc-wrapper`:
-
-```bash
-cargo build --release --bin objfs-cc-wrapper
-sudo cp target/release/objfs-cc-wrapper /usr/local/bin/
-```
+objfs caches C/C++ compilation through `objfs-cc-wrapper` (installed by
+`cargo install` above).
 
 ### CMake
 
 ```bash
 cmake .. \
-  -DCMAKE_C_COMPILER_LAUNCHER=/usr/local/bin/objfs-cc-wrapper \
-  -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/objfs-cc-wrapper
+  -DCMAKE_C_COMPILER_LAUNCHER=objfs-cc-wrapper \
+  -DCMAKE_CXX_COMPILER_LAUNCHER=objfs-cc-wrapper
 ```
 
 ### Make

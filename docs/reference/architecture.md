@@ -2,7 +2,7 @@
 
 ## High-Level Overview
 
-objfs is a distributed build cache and remote execution system for Rust, built on NativeLink's Remote Execution API v2.
+objfs is a distributed build cache and remote execution system for Rust, built on the Remote Execution API v2.
 
 ```
 ┌──────────────────────────────────────────────────────────────┐

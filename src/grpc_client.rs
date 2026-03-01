@@ -380,7 +380,7 @@ impl GrpcRemoteCas {
                     Err(_) => {
                         return Err(io::Error::new(
                             io::ErrorKind::TimedOut,
-                            "Remote execution timed out after 30 seconds. Worker may be missing required toolchain (rustc). Check NativeLink worker configuration."
+                            "Remote execution timed out after 30 seconds. Worker may be missing required toolchain (rustc). Check worker configuration."
                         ));
                     }
                 }

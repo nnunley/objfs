@@ -1,6 +1,6 @@
 # objfs
 
-Distributed build cache for Rust using NativeLink's Remote Execution API.
+Distributed build cache for Rust using the Remote Execution API v2.
 
 ## Features
 
@@ -9,12 +9,13 @@ Distributed build cache for Rust using NativeLink's Remote Execution API.
 - **Auto-worker registration** -- Every machine contributes to the cluster
 - **C/C++ support** -- Cache GCC and Clang compilations via `objfs-cc-wrapper`
 
-## Install
+## Installation
 
 ```bash
-cargo build --release
-sudo cp target/release/cargo-objfs-rustc /usr/local/bin/
+cargo install --git https://github.com/nnunley/objfs
 ```
+
+This installs three binaries: `objfs`, `cargo-objfs-rustc`, and `objfs-cc-wrapper`.
 
 objfs intercepts `rustc` through Cargo's wrapper mechanism. No code changes required.
 
