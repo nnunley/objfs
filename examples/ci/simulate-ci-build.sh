@@ -17,7 +17,7 @@ echo -e "${BLUE}========================================${NC}"
 echo ""
 
 # Configuration (simulate CI environment variables)
-export OBJFS_REMOTE_ENDPOINT="${OBJFS_REMOTE_ENDPOINT:-http://scheduler-host:50051}"
+export OBJFS_REMOTE_ENDPOINT="${OBJFS_REMOTE_ENDPOINT:-http://localhost:50051}"
 export OBJFS_REMOTE_INSTANCE="${OBJFS_REMOTE_INSTANCE:-ci-demo}"
 export OBJFS_NO_AUTO_WORKER=1
 export OBJFS_MIN_REMOTE_SIZE=1
@@ -32,19 +32,19 @@ echo ""
 if ! command -v cargo-objfs-rustc &> /dev/null; then
     echo -e "${RED}ERROR: cargo-objfs-rustc not found${NC}"
     echo "Please install objfs first:"
-    echo "  cd objfs && cargo build --release"
+    echo "  cargo build --release"
     echo "  sudo cp target/release/cargo-objfs-rustc /usr/local/bin/"
     exit 1
 fi
 
-# Check if we have a test project
-if [ ! -d "your-project" ]; then
-    echo -e "${YELLOW}WARNING: Test project not found${NC}"
-    echo "This script expects your-project to exist"
+# Check if a test project was specified
+if [ -z "$1" ]; then
+    echo -e "${YELLOW}WARNING: No test project specified${NC}"
+    echo "Usage: $0 /path/to/rust-project"
     exit 1
 fi
 
-TEST_PROJECT="${1:-your-project}"
+TEST_PROJECT="$1"
 TEST_PROJECT=$(eval echo "$TEST_PROJECT")  # Expand ~
 
 echo -e "${GREEN}Test project: ${NC}$TEST_PROJECT"

@@ -17,7 +17,7 @@ pub struct GrpcRemoteCas {
 
 impl GrpcRemoteCas {
     /// Create a new gRPC client
-    /// endpoint should be like "https://scheduler-host:50051" or "grpc://localhost:50051"
+    /// endpoint should be like "https://build-server:50051" or "grpc://localhost:50051"
     pub fn new(endpoint: String, instance_name: String) -> Self {
         let use_tls = endpoint.starts_with("https://");
         Self {
@@ -211,7 +211,7 @@ mod tests {
     #[test]
     #[ignore]
     fn test_grpc_cas_with_tls() {
-        let cas = GrpcRemoteCas::with_tls("scheduler-host", 50051, "main".to_string());
+        let cas = GrpcRemoteCas::with_tls("localhost", 50051, "main".to_string());
 
         let data = b"test data from gRPC client";
         let digest = cas.upload(data).unwrap();
@@ -226,7 +226,7 @@ mod tests {
     #[ignore]
     fn test_grpc_cas_without_tls() {
         // For local testing without TLS
-        let cas = GrpcRemoteCas::without_tls("scheduler-host", 50051, "main".to_string());
+        let cas = GrpcRemoteCas::without_tls("localhost", 50051, "main".to_string());
 
         let data = b"test data without TLS";
         let digest = cas.upload(data).unwrap();

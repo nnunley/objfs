@@ -9,7 +9,7 @@ use std::path::PathBuf;
 fn test_should_use_remote_for_cross_compilation() {
     // Setup remote config for cross-compilation scenario
     unsafe {
-        env::set_var("OBJFS_REMOTE_ENDPOINT", "http://scheduler-host:50051");
+        env::set_var("OBJFS_REMOTE_ENDPOINT", "http://localhost:50051");
         env::set_var("OBJFS_REMOTE_TARGETS", "aarch64-apple-darwin,x86_64-apple-darwin");
         env::set_var("OBJFS_MIN_REMOTE_SIZE", "1024"); // 1KB threshold
     }
@@ -73,7 +73,7 @@ fn test_create_action_from_rustc_build() {
 #[test]
 fn test_remote_executor_creation_from_config() {
     unsafe {
-        env::set_var("OBJFS_REMOTE_ENDPOINT", "https://scheduler-host:50051");
+        env::set_var("OBJFS_REMOTE_ENDPOINT", "https://localhost:50051");
         env::set_var("OBJFS_REMOTE_TARGETS", "aarch64-apple-darwin");
         env::set_var("OBJFS_REMOTE_INSTANCE", "main");
     }

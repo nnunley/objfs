@@ -230,7 +230,7 @@ pub struct HttpRemoteCas {
 
 impl HttpRemoteCas {
     /// Create a new HTTP CAS client
-    /// base_url should be like "http://scheduler-host:50051"
+    /// base_url should be like "http://build-server:50051"
     /// instance_name is typically "main" or empty string
     pub fn new(base_url: String) -> Self {
         Self::with_instance(base_url, String::new())

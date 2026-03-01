@@ -6,7 +6,7 @@ use std::env;
 /// Configuration for remote execution
 #[derive(Debug, Clone)]
 pub struct RemoteConfig {
-    /// URL of the remote execution server (e.g., "https://scheduler-host:50051")
+    /// URL of the remote execution server (e.g., "https://build-server:50051")
     pub endpoint: Option<String>,
 
     /// Instance name for the remote server (e.g., "main")
@@ -150,7 +150,7 @@ mod tests {
     #[test]
     fn test_remote_config_from_env() {
         unsafe {
-            env::set_var("OBJFS_REMOTE_ENDPOINT", "http://scheduler-host:50051");
+            env::set_var("OBJFS_REMOTE_ENDPOINT", "http://localhost:50051");
             env::set_var("OBJFS_REMOTE_TARGETS", "aarch64-apple-darwin,x86_64-unknown-linux-gnu");
             env::set_var("OBJFS_REMOTE_INSTANCE", "test-instance");
         }
@@ -158,7 +158,7 @@ mod tests {
         let config = RemoteConfig::from_env();
 
         assert!(config.is_enabled());
-        assert_eq!(config.endpoint.unwrap(), "http://scheduler-host:50051");
+        assert_eq!(config.endpoint.unwrap(), "http://localhost:50051");
         assert_eq!(config.instance_name, "test-instance");
         assert_eq!(config.remote_target_platforms.len(), 2);
 
@@ -173,7 +173,7 @@ mod tests {
     #[test]
     fn test_can_build_macos_with_osxcross() {
         unsafe {
-            env::set_var("OBJFS_REMOTE_ENDPOINT", "http://scheduler-host:50051");
+            env::set_var("OBJFS_REMOTE_ENDPOINT", "http://localhost:50051");
             // Linux workers with osxcross can build macOS targets
             env::set_var("OBJFS_REMOTE_TARGETS", "aarch64-apple-darwin,x86_64-apple-darwin");
         }
@@ -200,7 +200,7 @@ mod tests {
     #[test]
     fn test_cannot_build_unsupported_target() {
         unsafe {
-            env::set_var("OBJFS_REMOTE_ENDPOINT", "http://scheduler-host:50051");
+            env::set_var("OBJFS_REMOTE_ENDPOINT", "http://localhost:50051");
             env::set_var("OBJFS_REMOTE_TARGETS", "aarch64-apple-darwin");
         }
 

@@ -7,7 +7,7 @@ use objfs::re_client::{Digest, RemoteCas, HttpRemoteCas};
 #[ignore] // Run with: cargo test --ignored http_cas_upload_and_download
 fn test_http_cas_upload_and_download() {
     // Connect to local NativeLink instance
-    let cas = HttpRemoteCas::new("http://scheduler-host:50051".to_string());
+    let cas = HttpRemoteCas::new("http://localhost:50051".to_string());
 
     let data = b"test data from objfs";
 
@@ -25,7 +25,7 @@ fn test_http_cas_upload_and_download() {
 #[test]
 #[ignore]
 fn test_http_cas_nonexistent_blob() {
-    let cas = HttpRemoteCas::new("http://scheduler-host:50051".to_string());
+    let cas = HttpRemoteCas::new("http://localhost:50051".to_string());
 
     // Fake digest
     let fake_digest = Digest::new("0".repeat(64), 0);
@@ -41,7 +41,7 @@ fn test_http_cas_nonexistent_blob() {
 #[test]
 #[ignore]
 fn test_http_cas_large_blob() {
-    let cas = HttpRemoteCas::new("http://scheduler-host:50051".to_string());
+    let cas = HttpRemoteCas::new("http://localhost:50051".to_string());
 
     // Create a 1MB blob
     let data = vec![42u8; 1024 * 1024];
