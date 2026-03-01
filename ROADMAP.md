@@ -20,9 +20,18 @@ Track progress toward ccache-level caching support.
 
 ## Issue Tracking
 
-View issues: `git-issue list`
-Show ready: `git-issue ready`
-Dependencies: `git-issue deps`
+Issues stored in git notes (refs/notes/issue-*).
+
+Commands:
+- `git-issue list` - Show all issues
+- `git-issue ready` - Show ready to work on
+- `git-issue deps` - Show dependency graph
+- `git-issue show <id>` - View issue details
+- `git-issue update <id>` - Modify issue
+
+Sync with remote:
+- `git-issue setup-sync enable` - Auto-sync notes on push/pull
+- Or manually: `git push origin 'refs/notes/*'`
 
 ### High Priority (Correctness)
 
