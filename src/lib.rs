@@ -8,3 +8,4 @@ pub mod platform;
 pub mod remote_config;
 pub mod directory_tree;
 pub mod local_worker;
+pub mod config;
