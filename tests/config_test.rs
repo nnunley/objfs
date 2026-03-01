@@ -3,7 +3,7 @@ use std::io::Write;
 
 use tempfile::TempDir;
 
-use objfs::config::ObjfsConfig;
+use objfs::config::{detect_project_type, ObjfsConfig};
 
 #[test]
 fn test_parse_minimal_toml() {
@@ -202,4 +202,39 @@ fn test_env_overrides() {
         std::env::remove_var("OBJFS_MIN_REMOTE_SIZE");
         std::env::remove_var("OBJFS_NO_AUTO_WORKER");
     }
+}
+
+#[test]
+fn test_detect_rust_project() {
+    let dir = TempDir::new().unwrap();
+    fs::write(dir.path().join("Cargo.toml"), "[package]\nname = \"test\"").unwrap();
+    assert_eq!(detect_project_type(dir.path()), "rust");
+}
+
+#[test]
+fn test_detect_cmake_project() {
+    let dir = TempDir::new().unwrap();
+    fs::write(dir.path().join("CMakeLists.txt"), "cmake_minimum_required(VERSION 3.10)").unwrap();
+    assert_eq!(detect_project_type(dir.path()), "cmake");
+}
+
+#[test]
+fn test_detect_make_project() {
+    let dir = TempDir::new().unwrap();
+    fs::write(dir.path().join("Makefile"), "all:\n\t@echo hello").unwrap();
+    assert_eq!(detect_project_type(dir.path()), "make");
+}
+
+#[test]
+fn test_detect_mixed_project() {
+    let dir = TempDir::new().unwrap();
+    fs::write(dir.path().join("Cargo.toml"), "[package]").unwrap();
+    fs::write(dir.path().join("Makefile"), "all:").unwrap();
+    assert_eq!(detect_project_type(dir.path()), "mixed");
+}
+
+#[test]
+fn test_detect_unknown_project() {
+    let dir = TempDir::new().unwrap();
+    assert_eq!(detect_project_type(dir.path()), "unknown");
 }
