@@ -9,7 +9,7 @@ objfs works in CI/CD environments. Tested with moor and fmpl projects, measured 
 **GitHub Actions** (`examples/ci/github-actions.yml`) - Complete workflow with parallel builds
 **GitLab CI** (`examples/ci/gitlab-ci.yml`) - Multi-stage pipeline with matrix builds
 
-**Documentation** (1,500+ lines)
+**Documentation** (1,000+ lines)
 - `CI_CD_GUIDE.md` - Installation, configuration, benchmarks
 - `PROOF_OF_CONCEPT.md` - Test evidence, measurements
 - `simulate-ci-build.sh` - Runnable demonstration
