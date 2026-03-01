@@ -1,6 +1,6 @@
 # objfs Quick Start
 
-Get distributed build caching and remote execution working in 5 minutes.
+Distributed build caching in 5 minutes.
 
 ## Installation
 
@@ -10,25 +10,19 @@ cargo build --release
 sudo cp target/release/cargo-objfs-rustc /usr/local/bin/
 ```
 
-## Option 1: Local Caching Only (Zero Config)
-
-Use objfs for local caching with automatic worker:
+## Local Caching (Zero Config)
 
 ```bash
-# Just use it - auto-starts local worker
 cargo build --release
 ```
 
-That's it! objfs will:
-- Auto-start a local NativeLink worker
-- Cache build artifacts locally
-- Reuse cached builds instantly
+objfs auto-starts a worker, caches artifacts, and reuses them instantly.
 
-## Option 2: Shared Build Cluster
+## Shared Build Cluster
 
-### Step 1: Set Up Scheduler (One Machine)
+### Step 1: Set Up Scheduler
 
-On your build server or a shared machine:
+On your build server:
 
 ```bash
 # Install NativeLink
@@ -111,191 +105,102 @@ sudo mkdir -p /var/lib/nativelink
 sudo nativelink /etc/nativelink/config.json5
 ```
 
-### Step 2: Configure Developer Machines
+### Step 2: Configure Developers
 
-On every dev machine:
+On each machine:
 
 ```bash
-# Point to the scheduler
 export OBJFS_REMOTE_ENDPOINT="http://build-server:50051"
 export OBJFS_REMOTE_INSTANCE="main"
-
-# Add to ~/.bashrc or ~/.zshrc to persist
 echo 'export OBJFS_REMOTE_ENDPOINT="http://build-server:50051"' >> ~/.zshrc
 echo 'export OBJFS_REMOTE_INSTANCE="main"' >> ~/.zshrc
-
-# Build anything
 cargo build
 ```
 
-That's it! Each dev machine will:
-1. Auto-register as a worker with the scheduler
-2. Participate in distributed builds
-3. Share cache with all other developers
+Each machine auto-registers as a worker and shares cache with the cluster.
 
-## Verify It's Working
+## Verify
 
 ```bash
-# Build something
-cd /tmp
-cargo init --bin hello
-cd hello
-
-# First build (cold cache)
-time cargo build --release
-# Takes ~2-5 seconds
-
-# Clean and rebuild (hot cache)
+cd /tmp && cargo init --bin hello && cd hello
+time cargo build --release  # 2-5 seconds (cold)
 cargo clean
-time cargo build --release
-# Takes ~100ms (instant!)
+time cargo build --release  # ~100ms (hot)
+cargo build --release 2>&1 | grep objfs  # Shows cache hits
 ```
 
-Check cache hit:
+## Configuration
+
+**Disable objfs:**
 ```bash
-cargo build --release 2>&1 | grep objfs
-# [objfs] cache hit: hello
-```
-
-## Configuration Options
-
-### Disable for Specific Builds
-
-```bash
-# Temporarily disable
 OBJFS_DISABLE=1 cargo build
-
-# Or exclude this project
-echo 'OBJFS_DISABLE=1' > .cargo/config.toml
 ```
 
-### Adjust Cache Behavior
-
+**Adjust cache threshold:**
 ```bash
-# Only cache files larger than 1 MB
-export OBJFS_MIN_REMOTE_SIZE=1048576
-
-# Cache everything (including small files)
-export OBJFS_MIN_REMOTE_SIZE=1
+export OBJFS_MIN_REMOTE_SIZE=1048576  # 1 MB minimum
+export OBJFS_MIN_REMOTE_SIZE=1        # Cache everything
 ```
 
-### Client-Only Mode (No Auto-Worker)
-
+**Client-only mode:**
 ```bash
-# Don't start local worker, only use remote workers
 export OBJFS_NO_AUTO_WORKER=1
-cargo build
 ```
 
 ## Monitoring
 
-### Check Scheduler Status
-
+**Scheduler status:**
 ```bash
-# On scheduler machine
 curl http://localhost:50051/health
-
-# Check CAS size
-du -sh /var/lib/nativelink/cas
-
-# Check AC size
-du -sh /var/lib/nativelink/ac
+du -sh /var/lib/nativelink/{cas,ac}
 ```
 
-### Check Worker Registration
-
+**Worker registration:**
 ```bash
-# On scheduler machine - check logs
 journalctl -u nativelink -f
-
-# Should see:
-# Worker registered: darwin/aarch64 from 10.0.1.10
-# Worker registered: linux/x86-64 from 10.0.1.11
 ```
 
-### Monitor Cache Hits
-
+**Cache hits:**
 ```bash
-# In your project
-cargo clean
-cargo build 2>&1 | grep -E "objfs|cache"
-
-# Output:
-# [objfs] cache hit: libfoo.rlib
-# [objfs] cache hit: main.o
-# [objfs] cache hit: myapp
+cargo build 2>&1 | grep objfs
 ```
 
 ## Troubleshooting
 
-### "Connection refused" Error
-
-Scheduler not reachable:
+**Connection refused:**
 ```bash
-# Test connectivity
 curl -v http://build-server:50051/health
-
-# Check firewall
-sudo ufw allow 50051/tcp
-sudo ufw allow 50061/tcp
+sudo ufw allow 50051/tcp 50061/tcp
 ```
 
-### Builds Not Cached
-
-Check configuration:
+**No cache hits:**
 ```bash
-# Verify endpoint
 echo $OBJFS_REMOTE_ENDPOINT
-
-# Test manually
 cargo-objfs-rustc rustc --version
-# Should see worker start message
 ```
 
-### Worker Won't Start
-
-Check if `nativelink` is installed:
+**Worker won't start:**
 ```bash
-which nativelink
-# If not found:
 cargo install nativelink
 ```
 
-### Cache Consuming Too Much Disk
-
-Reduce cache size:
+**Cache too large:**
+Edit `/etc/nativelink/config.json5` and reduce `max_bytes`, or:
 ```bash
-# On scheduler
-# Edit /etc/nativelink/config.json5
-# Change max_bytes to smaller value
-
-# Or clean manually
-rm -rf /var/lib/nativelink/cas/*
-rm -rf /var/lib/nativelink/ac/*
+rm -rf /var/lib/nativelink/{cas,ac}/*
 ```
 
-## Next Steps
+## Performance
 
-- Read [ARCHITECTURE.md](ARCHITECTURE.md) for technical details
-- See [MULTI_WORKER_SETUP.md](MULTI_WORKER_SETUP.md) for advanced configuration
-- Check [AUTO_WORKER_REGISTRATION.md](AUTO_WORKER_REGISTRATION.md) for worker details
+Use SSD storage, increase cache size, and place scheduler near workers for best results.
 
-## Performance Tips
+**Typical speedups:**
+- Small project: 45s → 100ms (450x)
+- Large monorepo: 15m → 3s (300x)
+- CI builds: 80% faster
 
-1. **Use fast storage for CAS** - SSD recommended
-2. **Increase cache size** - More cache = higher hit rates
-3. **Collocate scheduler and primary workers** - Reduces network latency
-4. **Use GbE or faster network** - Large artifacts transfer faster
-5. **Enable on CI/CD** - Massive speedup from shared cache
+## Further Reading
 
-## Example Speedups
-
-**Typical Rust project:**
-- Cold build: 45 seconds
-- Hot build (local cache): 100ms
-- Hit rate after warmup: >90%
-
-**Large monorepo:**
-- Cold build: 15 minutes
-- Hot build: 2-3 seconds
-- CI builds: 80% faster with shared cache
+- [ARCHITECTURE.md](ARCHITECTURE.md) - Technical details
+- [examples/ci/](examples/ci/) - CI/CD integration
+- [AUTO_WORKER_REGISTRATION.md](AUTO_WORKER_REGISTRATION.md) - Worker setup
