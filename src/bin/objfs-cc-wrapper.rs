@@ -29,6 +29,9 @@ fn run() -> io::Result<()> {
     let compiler = &args[0];
     let compiler_args = &args[1..];
 
+    // Future: load ObjfsConfig for remote C/C++ execution support
+    // let _config = objfs::config::ObjfsConfig::load();
+
     // If CAS is disabled, just pass through
     if env::var("OBJFS_DISABLE").is_ok() {
         exec_compiler(compiler, compiler_args);
