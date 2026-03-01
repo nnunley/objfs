@@ -1,16 +1,15 @@
 # CMake Integration Example
 
-Demonstrates using objfs distributed caching with CMake builds.
+objfs caching for CMake builds.
 
 ## Build
 
 ```bash
 mkdir build && cd build
-cmake ..
-make
+cmake .. && make
 ```
 
-Every compilation shows `[objfs-cc]` cache hit/miss status.
+Shows `[objfs-cc]` for each compilation.
 
 ## How It Works
 
@@ -20,19 +19,13 @@ set(CMAKE_C_COMPILER_LAUNCHER "objfs-cc-wrapper")
 set(CMAKE_CXX_COMPILER_LAUNCHER "objfs-cc-wrapper")
 ```
 
-Every compilation becomes:
-```
-objfs-cc-wrapper gcc -c hello.c -o hello.o
-```
+Wrapper intercepts every compilation:
+1. Compute SHA256(source + flags)
+2. Check local CAS
+3. Hit: restore .o instantly
+4. Miss: compile and store
 
-The wrapper:
-1. Parses compiler arguments
-2. Computes cache key from source + flags
-3. Checks local CAS for cached result
-4. On hit: Restores .o file instantly
-5. On miss: Compiles and stores result in CAS
-
-## Run Examples
+## Run
 
 ```bash
 ./hello_c
@@ -40,10 +33,9 @@ The wrapper:
 ./uselib
 ```
 
-## Features
+## Status
 
-- ✅ Local caching with content-addressable storage
-- ✅ Cache key from source + compiler flags
-- ✅ Instant .o file restoration on cache hit
-- ⏳ Remote execution (future)
-- ⏳ Distributed cache sharing (future)
+- ✅ Local caching
+- ✅ Content-addressed storage
+- ⏳ Remote execution
+- ⏳ Distributed cache
