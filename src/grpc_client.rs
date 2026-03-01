@@ -1,11 +1,10 @@
 // gRPC client for Remote Execution API v2
-// Implements secure communication with NativeLink over TLS
+// Implements secure communication over gRPC with RE API v2 servers
 
 use crate::re_client::{Digest, RemoteCas};
 use std::io;
 
-// Use NativeLink's proto definitions
-use nativelink_proto::build::bazel::remote::execution::v2 as cas;
+use crate::proto::build::bazel::remote::execution::v2 as cas;
 
 /// gRPC-based Remote CAS client
 /// Supports both TLS (https://) and plaintext (grpc://) connections
@@ -287,6 +286,7 @@ impl GrpcRemoteCas {
                 platform: None,
                 working_directory: command.working_directory.clone(),
                 output_node_properties: vec![],
+                output_directory_format: 0,  // 0 = TREE_ONLY (default)
             };
 
             let command_bytes = {
@@ -348,6 +348,9 @@ impl GrpcRemoteCas {
                 execution_policy: None,
                 results_cache_policy: None,
                 digest_function: 0,  // 0 = UNKNOWN (use default SHA256)
+                inline_stdout: false,
+                inline_stderr: false,
+                inline_output_files: vec![],
             };
 
             let mut stream = exec_client
@@ -387,7 +390,7 @@ impl GrpcRemoteCas {
                 .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "No response from execution"))?;
 
             // 5. Extract output from Operation result
-            use nativelink_proto::google::longrunning::operation;
+            use crate::proto::google::longrunning::operation;
 
             let operation_result = response.result
                 .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "No result in operation"))?;

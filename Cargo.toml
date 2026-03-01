@@ -2,6 +2,12 @@
 name = "objfs"
 version = "0.1.0"
 edition = "2024"
+description = "Distributed build cache using Remote Execution API v2"
+license = "MIT"
+repository = "https://github.com/nnunley/objfs"
+readme = "README.md"
+keywords = ["build-cache", "remote-execution", "compilation", "rust"]
+categories = ["development-tools::build-utils", "caching"]
 
 [dependencies]
 sha2 = "0.10"
@@ -18,10 +24,9 @@ tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
 anyhow = "1.0"
 toml = { version = "0.8", features = ["preserve_order"] }
 json5 = "0.4"
-nativelink-proto = { path = "../nativelink/nativelink-proto" }
 
 [build-dependencies]
-tonic-build = "0.12"
+tonic-build = "0.13"
 
 [dev-dependencies]
 tempfile = "3.10"

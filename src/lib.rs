@@ -1,3 +1,4 @@
+pub mod proto;
 pub mod cas;
 pub mod bundle;
 pub mod output_detection;

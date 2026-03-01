@@ -1,7 +1,7 @@
 use crate::re_client::Digest;
 use std::path::PathBuf;
 use std::io;
-use nativelink_proto::build::bazel::remote::execution::v2 as cas;
+use crate::proto::build::bazel::remote::execution::v2 as cas;
 use prost::Message;
 
 #[derive(Debug, Clone)]
