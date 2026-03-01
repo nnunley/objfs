@@ -3,6 +3,8 @@
 
 use std::env;
 
+use crate::config::ObjfsConfig;
+
 /// Configuration for remote execution
 #[derive(Debug, Clone)]
 pub struct RemoteConfig {
@@ -62,6 +64,33 @@ impl RemoteConfig {
             instance_name,
             remote_target_platforms,
             min_remote_size,
+        }
+    }
+
+    /// Create RemoteConfig from an ObjfsConfig.
+    /// ObjfsConfig handles the full precedence chain
+    /// (env vars > objfs.toml > global config > defaults).
+    pub fn from_objfs_config(config: &ObjfsConfig) -> Self {
+        let endpoint = config.remote.endpoint.clone()
+            .or_else(|| {
+                if Self::localhost_worker_available() {
+                    Some("http://localhost:50051".to_string())
+                } else {
+                    None
+                }
+            });
+
+        let remote_target_platforms = if config.worker.targets.is_empty() {
+            vec![Self::host_target_triple()]
+        } else {
+            config.worker.targets.clone()
+        };
+
+        Self {
+            endpoint,
+            instance_name: config.remote.instance.clone(),
+            remote_target_platforms,
+            min_remote_size: config.remote.min_remote_size,
         }
     }
 

@@ -8,6 +8,7 @@ use objfs::cas::Cas;
 use objfs::bundle::ArtifactBundle;
 use objfs::output_detection;
 use objfs::platform::Platform;
+use objfs::config::ObjfsConfig;
 use objfs::remote_config::RemoteConfig;
 use objfs::re_client::{Command as ReCommand, Action, RemoteExecutor};
 use objfs::grpc_client::GrpcRemoteCas;
@@ -73,7 +74,9 @@ fn run() -> io::Result<()> {
     }
 
     // Cache miss - check if we should use remote execution
-    let remote_config = RemoteConfig::from_env();
+    let objfs_config = ObjfsConfig::load()
+        .unwrap_or_else(|_| ObjfsConfig::default());
+    let remote_config = RemoteConfig::from_objfs_config(&objfs_config);
 
     // Determine target triple and input size
     // If no --target flag, use host's default target
