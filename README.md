@@ -21,6 +21,9 @@ objfs intercepts `rustc` through Cargo's wrapper mechanism. No code changes requ
 ## Usage
 
 ```bash
+# Initialize a project
+objfs init
+
 # Local caching (zero config)
 cargo build --release
 

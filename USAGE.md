@@ -9,6 +9,30 @@ cargo build --release
 sudo cp target/release/cargo-objfs-rustc /usr/local/bin/
 ```
 
+## Quick Setup
+
+Initialize a project:
+
+```bash
+objfs init
+```
+
+objfs detects the project type (Rust, CMake, Make) and writes `objfs.toml`.
+For Rust projects, it also creates `.cargo/config.toml` with the rustc wrapper.
+
+To share configuration across a team, export and commit the config file:
+
+```bash
+objfs init --export-config
+git add objfs.toml
+```
+
+Other developers apply the shared config:
+
+```bash
+objfs init --config objfs.toml
+```
+
 ## Local Caching
 
 objfs caches build artifacts with no configuration. Run any Cargo build:
